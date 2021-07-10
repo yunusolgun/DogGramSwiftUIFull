@@ -14,14 +14,17 @@ struct ProfileView: View {
     var isMyProfile: Bool
     @State var profileDisplayName: String
     var profileUserID: String
+    @State var profileBio: String = ""
     
-    var posts = PostArrayObject()
+    @State var profileImage: UIImage = UIImage(named: "logo.loading")!
+    
+    var posts: PostArrayObject
     
     @State var showSettings: Bool = false
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false, content: {
-            ProfileHeaderView(profileDisplayName: $profileDisplayName)
+            ProfileHeaderView(profileDisplayName: $profileDisplayName, profileImage: $profileImage, postArray: posts, profileBio: $profileBio)
             Divider()
             ImageGridView(posts: posts)
         })
@@ -36,17 +39,47 @@ struct ProfileView: View {
                                 .accentColor(colorScheme == .light ? Color.MyTheme.purpleColor : Color.MyTheme.yellowColor)
                                 .opacity(isMyProfile ? 1.0 : 0.0)
         )
+        .onAppear(perform: {
+           getProfileImage()
+            getAdditionalProfileInfo()
+        })
         .sheet(isPresented: $showSettings, content: {
-            SettingsView()
+            SettingsView(userDisplayName: $profileDisplayName, userBio: $profileBio, userProfilePicture: $profileImage)
                 .preferredColorScheme(colorScheme)
         })
     }
+    
+    // MARK: FUNCTIONS
+    
+    func getProfileImage() {
+        ImageManager.instance.downloadProfileImage(userID: profileUserID) { returnedImage in
+            
+            if let image = returnedImage {
+                self.profileImage = image
+            }
+        }
+    }
+    
+    
+    func getAdditionalProfileInfo() {
+        AuthService.instance.getUserInfo(forUserID: profileUserID) { returnedDisplayName, returnedBio in
+            if let displayName = returnedDisplayName {
+                self.profileDisplayName = displayName
+            }
+            
+            if let bio = returnedBio {
+                self.profileBio = bio
+            }
+        }
+    }
+    
+    
 }
 
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            ProfileView(isMyProfile: true, profileDisplayName: "Joe", profileUserID: "")
+            ProfileView(isMyProfile: true, profileDisplayName: "Joe", profileUserID: "", posts: PostArrayObject(userID: ""))
                 .preferredColorScheme(.light)
         }
     }
